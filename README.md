@@ -42,7 +42,7 @@ Para rodar o projeto localmente:
     pip install python display
     ```
 
-## Ferramentas tecnologias
+## Ferramentas e tecnologias
 
 Tecnologias Utilizadas
 
