@@ -1,7 +1,6 @@
 import warnings
-
 import cv2
-import torch
+from ultralytics import YOLO
 from PIL import Image
 
 # Função para detectar objetos em um único frame
@@ -9,14 +8,32 @@ def detect_objects_in_frame(model, frame):
     # Converte o frame de OpenCV (BGR) para PIL (RGB)
     img = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
 
-    # Realiza a detecção de objetos no frame usando o modelo YOLOv5
-    results = model(img)
+    # Realiza a detecção de objetos no frame, limitando às classes especificadas
+    results = model.predict(source=img, classes=[0, 2], save=False, conf=0.5)
 
-    # Renderiza as detecções na imagem (adiciona as caixas de detecção)
-    results.render()  # Renderiza as caixas de detecção diretamente
+    # Renderiza as detecções no frame original
+    for result in results:
+        for box in result.boxes:
+            xyxy = box.xyxy[0].cpu().numpy()
+            cls = int(box.cls[0])  # Classe do objeto
+            conf = box.conf[0]  # Confiança da detecção
+            xmin, ymin, xmax, ymax = map(int, xyxy)
 
-    # Retorna o frame com as caixas de detecção desenhadas
-    return results.ims[0]  # Acessando o frame processado
+            # Determinar cor e texto baseado na classe
+            if cls == 0:  # Classe "person"
+                color = (0, 0, 255)  # Vermelho
+                label = f"Person {conf:.2f}"
+            elif cls == 2:  # Classe "car"
+                color = (255, 0, 0)  # Azul
+                label = f"Car {conf:.2f}"
+            else:
+                continue
+
+            # Desenhar bounding box no frame
+            cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), color, 2)
+            cv2.putText(frame, label, (xmin, ymin - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+
+    return frame
 
 # Função para processar o vídeo
 def detect_objects_in_video(video_path, model):
@@ -48,8 +65,8 @@ def detect_objects_in_video(video_path, model):
     cap.release()
     cv2.destroyAllWindows()
 
-# Carregar o modelo YOLOv5
-model = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True)
+# Carregar o modelo YOLOv8
+model = YOLO('yolov8n.pt')
 
 # Caminho para o vídeo gravado
 video_path = 'videos/Tesla-Self-Driving.mp4'  # Substitua pelo caminho do seu vídeo
@@ -57,4 +74,5 @@ video_path = 'videos/Tesla-Self-Driving.mp4'  # Substitua pelo caminho do seu v�
 # Realizar a detecção no vídeo
 detect_objects_in_video(video_path, model)
 
+# Ignorar avisos do PyTorch
 warnings.filterwarnings("ignore", category=UserWarning, module="torch")

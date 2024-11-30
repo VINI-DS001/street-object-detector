@@ -15,10 +15,8 @@ def install_dependencies():
     install_package("Pillow")
     install_package("IPython")
     
-    # Caso precise instalar o YOLOv5 (se não já estiver instalado)
-    install_package("git+https://github.com/ultralytics/yolov5.git")
-    
-    print("Ambiente configurado com sucesso!")
+    # Caso precise instalar o YOLOv8 (se não já estiver instalado)
+    install_package("git+https://github.com/ultralytics/ultralytics.git")
 
 # Rodar a instalação
 if __name__ == "__main__":

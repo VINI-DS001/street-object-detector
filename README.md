@@ -15,7 +15,7 @@ Este projeto visa a criação de um sistema inteligente capaz de identificar obs
 
 ## Tecnologias Utilizadas
 - Python 3.x
-- YoloV5
+- Yolo
 - OpenCV
 - Bibliotecas: `torch`, `python display`, `cv2`
 - Git/GitHub para controle de versão e colaboração

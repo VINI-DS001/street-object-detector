@@ -1,76 +1,53 @@
-# run_object_detection.py
+# run_object_detection_yolov8.py
 
 import os
-import random
 from PIL import Image
 from IPython.display import display
-import torch
+from ultralytics import YOLO
 
-# Função para listar as extensões de arquivos em um diretório
-def get_file_extensions(folder_path):
-    files = os.listdir(folder_path)
-    file_extensions = {os.path.splitext(file)[1] for file in files}
-    return file_extensions
+# Função para processar as detecções e decidir ações
+def process_detections(results, img):
+    # Obtemos as dimensões da imagem
+    img_width, img_height = img.size
 
-# Função para detectar objetos nas imagens
-def detect_objects(model, image_paths):
-    # Realiza a detecção de objetos nas imagens
-    results = model(image_paths)
-    
-    # Print e visualiza os resultados da detecção
-    results.print()
-    results.show()
-    
-    return results
+    # Iterar sobre cada detecção
+    for result in results:
+        for box in result.boxes:  # Cada box é uma detecção individual
+            cls = int(box.cls[0])  # Classe do objeto
+            conf = box.conf[0]  # Confiança da detecção
+            xyxy = box.xyxy[0].cpu().numpy()  # Coordenadas do bounding box
+            xmin, ymin, xmax, ymax = xyxy
 
-# Caminho base para as imagens
-base_path = r'images\images\images'
+            # Determinar a ação com base na classe
+            if cls == 2:  # Classe "car"
+                print(f"Objeto detectado: Carro (Confiança: {conf:.2f}) -> Ação: Reduza a velocidade ou Freie.")
+            elif cls == 0:  # Classe "person"
+                # Calcular o centro do bounding box
+                center_x = (xmin + xmax) / 2
 
-# Listar todas as imagens no diretório
-all_images = os.listdir(base_path)
+                # Determinar se está na metade esquerda ou direita
+                if center_x < img_width / 2:  # Metade esquerda
+                    print(f"Objeto detectado: Pessoa (Confiança: {conf:.2f}) na esquerda -> Ação: Desviar para a direita.")
+                else:  # Metade direita
+                    print(f"Objeto detectado: Pessoa (Confiança: {conf:.2f}) na direita -> Ação: Desviar para a esquerda.")
 
-# Escolher uma imagem aleatória
-random_image = random.choice(all_images)
+# Caminho para a imagem de teste
+test_image_path = "images/images/test/test1.jpg"
 
-# Abrir e exibir a imagem escolhida
-img = Image.open(os.path.join(base_path, random_image))
+# Exibir a imagem original
+img = Image.open(test_image_path)
 display(img)
 
-# Carregar o modelo YOLOv5
-model = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True)
+# Carregar o modelo YOLOv8
+model = YOLO('yolov8n.pt')
 
-# Usar a imagem escolhida para inferência
-imgs = img  # batch de imagens
+# Realizar inferência na imagem de teste, limitando às classes de interesse (0: "person", 2: "car")
+results = model.predict(source=test_image_path, classes=[0, 2])
 
-# Realizar a inferência com o modelo YOLOv5
-results = model(imgs)
+# Processar os resultados e decidir ações
+process_detections(results, img)
 
-# Realizar detecção de objetos nas imagens passadas como argumento
-detection_results = detect_objects(model, imgs)
-
-# Lista de caminhos de imagens para mais detecções
-image_paths = [
-    f"images/images/test/test1.jpg",
-    f"images/images/test/test2.jpg",
-    f"images/images/test/test3.jpg",
-    f"images/images/test/test5.jpg",
-    #f"{base_path}/1478020515199458307.jpg",
-    #f"{base_path}/1478020231691535596.jpg",
-    #f"{base_path}/1478020351195471769.jpg",
-    #f"{base_path}/1478898499983147215.jpg",
-    #f"{base_path}/1478898651375864863.jpg",
-    #f"{base_path}/1479506165491761103.jpg",
-    #f"{base_path}/1478898957016224931.jpg",
-    #f"{base_path}/th1.jpg",
-    #f"{base_path}/GRdCC.jpg"
-]
-
-# Realizar a detecção de objetos para as imagens listadas
-results = detect_objects(model, image_paths)
-
-# Extrair os resultados da detecção como um DataFrame Pandas
-data_frame = results.pandas().xyxy[0]
-
-# Exibir os resultados da detecção
-print("Resultados da Detecção de Objetos:")
-print(data_frame)
+# Exibir a imagem com os resultados da detecção
+# results[0].plot() desenha os bounding boxes na imagem original e retorna a imagem plotada
+annotated_image = results[0].plot()  # Gera a imagem anotada
+display(Image.fromarray(annotated_image))  # Exibe a imagem anotada
