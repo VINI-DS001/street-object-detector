@@ -5,19 +5,34 @@ from PIL import Image
 
 # Função para detectar objetos em um único frame
 def detect_objects_in_frame(model, frame):
+    # Obtemos as dimensões do frame
+    img_height, img_width, _ = frame.shape
+
     # Converte o frame de OpenCV (BGR) para PIL (RGB)
     img = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
 
     # Realiza a detecção de objetos no frame, limitando às classes especificadas
     results = model.predict(source=img, classes=[0, 2], save=False, conf=0.5)
 
-    # Renderiza as detecções no frame original
+    # Processar as detecções
     for result in results:
         for box in result.boxes:
             xyxy = box.xyxy[0].cpu().numpy()
             cls = int(box.cls[0])  # Classe do objeto
             conf = box.conf[0]  # Confiança da detecção
             xmin, ymin, xmax, ymax = map(int, xyxy)
+
+            # Calcular o centro do bounding box
+            center_x = (xmin + xmax) / 2
+
+            # Determinar a ação com base na classe
+            if cls == 2:  # Classe "car"
+                print(f"Objeto detectado: Carro (Confiança: {conf:.2f}) -> Ação: Reduza a velocidade ou Freie.")
+            elif cls == 0:  # Classe "person"
+                if center_x < img_width / 2:  # Metade esquerda
+                    print(f"Objeto detectado: Pessoa (Confiança: {conf:.2f}) na esquerda -> Ação: Desviar para a direita.")
+                else:  # Metade direita
+                    print(f"Objeto detectado: Pessoa (Confiança: {conf:.2f}) na direita -> Ação: Desviar para a esquerda.")
 
             # Determinar cor e texto baseado na classe
             if cls == 0:  # Classe "person"
@@ -43,6 +58,8 @@ def detect_objects_in_video(video_path, model):
     if not cap.isOpened():
         print(f"Erro ao abrir o vídeo: {video_path}")
         return
+
+    print("Processando o vídeo. Pressione 'q' para sair.")
 
     while True:
         # Captura frame a frame
